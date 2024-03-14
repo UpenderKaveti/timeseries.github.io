@@ -3,7 +3,7 @@ project:
   output-dir: docs
 
 website:
-  title: "Time Series"
+  title: "ukaveti.github.io"
   navbar:
     left:
       - href: index.qmd
