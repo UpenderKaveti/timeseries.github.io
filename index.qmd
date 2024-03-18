@@ -261,21 +261,12 @@ covid_end_date <- "2020-06-01"
 ## Imputation
 
 ```{r}
-# Create a new variable to store imputed values
 merged_data$value.y_imputed <- merged_data$value.y
-
-# Identify indices for recession and COVID periods
 recession_indices <- which(merged_data$date >= as.Date(recession_start_date) & merged_data$date <= as.Date(recession_end_date))
 
 covid_indices <- which(merged_data$date >= as.Date(covid_start_date) & merged_data$date <= as.Date(covid_end_date))
-
-# Impute missing values using state space model (Kalman Smoothing) within recession period
 merged_data$value.y_imputed[recession_indices] <- na_kalman(merged_data$value.y[recession_indices])
-
-# Impute missing values using state space model (Kalman Smoothing) within COVID period
 merged_data$value.y_imputed[covid_indices] <- na_kalman(merged_data$value.y[covid_indices])
-
-# Create a new variable to identify periods
 merged_data$period <- ifelse(merged_data$date >= as.Date(recession_start_date) & merged_data$date <= as.Date(recession_end_date), "Recession",
                              ifelse(merged_data$date >= as.Date(covid_start_date) & merged_data$date <= as.Date(covid_end_date), "COVID", "Other"))
 ```
@@ -359,8 +350,8 @@ autoplot(regarima_forecast$mean)
 ## Plot of the forecasts
 ```{r}
 future_times <- seq(as.Date("2024-01-01"), by="month", length.out=10)
-sarima_forecast_values <- rnorm(10, mean=20, sd=2)  # replace with your SARIMA forecast values
-regarima_forecast_values <- rnorm(10, mean=22, sd=2)  # replace with your REGARIMA forecast values
+sarima_forecast_values <- rnorm(10, mean=20, sd=2)
+regarima_forecast_values <- rnorm(10, mean=22, sd=2)
 forecast_df <- data.frame( Time = future_times, SARIMA = sarima_forecast$mean,REGARIMA = regarima_forecast$mean)
 ggplot(forecast_df, aes(x = Time)) +  geom_line(aes(y = SARIMA, color = "SARIMA")) +
   geom_line(aes(y = REGARIMA, color = "REGARIMA")) +  labs(title = "Comparison of SARIMA and REGARIMA Forecast Values",
@@ -389,30 +380,22 @@ regarima_metrics <- matrix(NA, nrow = length(horizons), ncol = 4,
 # Perform cross-validation for each time horizon
 for (i in 1:length(horizons)) {
   horizon <- horizons[i]
-  # Split data into training and validation sets based on the current time horizon
   training_data <- merged_data[1:(nrow(merged_data) - horizon), ]
   validation_data <- merged_data[(nrow(merged_data) - horizon + 1):nrow(merged_data), ]
-  # Fit SARIMA model on training data
   sarima_model <- Arima(training_data$value.y, order = c(0, 1, 0), seasonal = list(order = c(0, 1, 1), period = 12))
-  # Fit REGARIMA model on training data
   regarima_model <- Arima(training_data$value.y, order = c(1, 1, 2),seasonal = list(order = c(1, 1, 1), period = 12), 
                         xreg = training_data$value.x, method = "ML",  # Maximum Likelihood estimation
                         optim.control = list(maxit = 1000))  # Increase max iterations
-  # Forecast using SARIMA model
   sarima_forecast <- forecast(sarima_model, h = horizon)
-  # Forecast using REGARIMA model
   regarima_forecast <- forecast(regarima_model, xreg = validation_data$value.x, h = horizon)
-  # Calculate accuracy metrics for SARIMA model
   sarima_mae <- mean(abs(sarima_forecast$mean - validation_data$value.y))
   sarima_mse <- mean((sarima_forecast$mean - validation_data$value.y)^2)
   sarima_rmse <- sqrt(sarima_mse)
   sarima_mape <- mean(abs((sarima_forecast$mean - validation_data$value.y) / validation_data$value.y) * 100)
-  # Calculate accuracy metrics for REGARIMA model
   regarima_mae <- mean(abs(regarima_forecast$mean - validation_data$value.y))
   regarima_mse <- mean((regarima_forecast$mean - validation_data$value.y)^2)
   regarima_rmse <- sqrt(regarima_mse)
   regarima_mape <- mean(abs((regarima_forecast$mean - validation_data$value.y) / validation_data$value.y) * 100)
-  # Store accuracy metrics in matrices
   sarima_metrics[i, ] <- c(sarima_mae, sarima_mse, sarima_rmse, sarima_mape)
   regarima_metrics[i, ] <- c(regarima_mae, regarima_mse, regarima_rmse, regarima_mape)
 }
@@ -433,7 +416,7 @@ print(regarima_metrics)
 sarima_metrics <- data.frame(  MAE = c(0.3176195, 0.1804412, 0.1735991, 0.2698319),
   MSE = c(0.10088213, 0.05215050, 0.05669376, 0.09414165),  RMSE = c(0.3176195, 0.2283648, 0.2381045, 0.3068251),  MAPE = c(0.8000491, 0.4569189, 0.4386709, 0.6792616),  lag = c(1, 3, 6, 12)
 )
-par(mfrow = c(2, 2))  # 2 rows, 2 columns
+par(mfrow = c(2, 2))
 for (metric in c("MAE", "MSE", "RMSE", "MAPE")) {
   metric_values <- sarima_metrics[[metric]]
   barplot(metric_values,names.arg = sarima_metrics$lag, xlab = "Lag", ylab = metric,  main = paste("Metric:", metric), col = "steelblue",ylim = c(0, max(metric_values) + 0.1)) 
@@ -444,7 +427,7 @@ for (metric in c("MAE", "MSE", "RMSE", "MAPE")) {
 ```{r}
 regarima_metrics <- data.frame(  MAE = c(0.02609560, 0.06475416, 0.06507301, 0.13319307),  MSE = c(0.0006809804, 0.0071253347, 0.0049938682, 0.0220287677),  RMSE = c(0.02609560, 0.08441170, 0.07066731, 0.14842091),  MAPE = c(0.06573199, 0.16399612, 0.16391259, 0.33488203),  lag = c(1, 3, 6, 12)
 )
-par(mfrow = c(2, 2))  # 2 rows, 2 columns
+par(mfrow = c(2, 2))
 for (metric in c("MAE", "MSE", "RMSE", "MAPE")) {
   metric_values <- regarima_metrics[[metric]]
   barplot(metric_values,names.arg = regarima_metrics$lag, xlab = "Lag", ylab = metric,  main = paste("Metric:", metric), col = "steelblue",ylim = c(0, max(metric_values) + 0.1))  
